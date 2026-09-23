@@ -4,7 +4,13 @@
     "type": "library",
     "license": "MIT",
     "version": "2.0.0",
-    "keywords": ["debug", "error", "exception", "development", "migears"],
+    "keywords": [
+        "debug",
+        "error",
+        "exception",
+        "development",
+        "migears"
+    ],
     "require": {
         "php": "^8.1"
     },
@@ -20,5 +26,8 @@
         "psr-4": {
             "MiGears\\Debug\\Tests\\": "tests/"
         }
+    },
+    "scripts": {
+        "test": "phpunit"
     }
 }
