@@ -6,6 +6,10 @@ Developer-friendly exception and error page for PHP.
 
 A single class that renders beautiful, dark-themed error pages with code snippets, stack traces, and request info. For development use only — never expose detailed error pages in production.
 
+> **Background**: miGears is the open-source successor of **TinyGears**, a
+> self-developed PHP framework. It was renamed and open-sourced recently because
+> the name *TinyGears* is already taken in the open-source community.
+
 ## Features
 
 - **Dark theme** — easy on the eyes during long debugging sessions
