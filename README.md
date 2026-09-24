@@ -41,6 +41,12 @@ use MiGears\Debug\DebugPage;
 DebugPage::register();
 ```
 
+To customize the registered page, pass a configured instance:
+
+```php
+DebugPage::register((new DebugPage())->withSnippetLines(20));
+```
+
 That's it. Any uncaught exception or PHP error will now display a beautiful debug page.
 
 ### Manual Rendering
@@ -60,7 +66,7 @@ try {
 
 ```php
 $debug = new DebugPage();
-$debug->withSnippetLines(20); // Show 20 lines around error
+$debug->withSnippetLines(20); // Show 20 lines total (error line included)
 
 echo $debug->render($exception);
 ```
@@ -122,7 +128,7 @@ set_exception_handler(function (\Throwable $e) use ($logger) {
 | `DebugPage::register()` | Register as global exception/error handler |
 | `new DebugPage()` | Create a new instance |
 | `render(Throwable $e): string` | Render exception as HTML page |
-| `withSnippetLines(int $lines): self` | Set lines shown around error |
+| `withSnippetLines(int $lines): self` | Set total lines shown (error line included) |
 
 ## Design Philosophy
 
@@ -184,6 +190,12 @@ use MiGears\Debug\DebugPage;
 DebugPage::register();
 ```
 
+若需定制注册的页面，传入配置好的实例：
+
+```php
+DebugPage::register((new DebugPage())->withSnippetLines(20));
+```
+
 就这么简单。任何未捕获的异常或 PHP 错误都会显示一个漂亮的调试页面。
 
 ### 手动渲染
@@ -203,7 +215,7 @@ try {
 
 ```php
 $debug = new DebugPage();
-$debug->withSnippetLines(20); // 显示错误行周围 20 行
+$debug->withSnippetLines(20); // 总共显示 20 行（含错误行）
 
 echo $debug->render($exception);
 ```
@@ -265,7 +277,7 @@ set_exception_handler(function (\Throwable $e) use ($logger) {
 | `DebugPage::register()` | 注册为全局异常/错误处理器 |
 | `new DebugPage()` | 创建新实例 |
 | `render(Throwable $e): string` | 将异常渲染为 HTML 页面 |
-| `withSnippetLines(int $lines): self` | 设置错误行周围显示的行数 |
+| `withSnippetLines(int $lines): self` | 设置总共显示的行数（含错误行） |
 
 ## 设计哲学
 

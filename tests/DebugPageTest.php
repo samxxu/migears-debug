@@ -156,6 +156,32 @@ final class DebugPageTest extends TestCase
         self::assertNotNull($current);
     }
 
+    public function testRegisterAcceptsConfiguredInstance(): void
+    {
+        $previous = set_exception_handler(fn() => null);
+        restore_exception_handler();
+
+        DebugPage::register((new DebugPage())->withSnippetLines(3));
+
+        $current = set_exception_handler(fn() => null);
+        restore_exception_handler();
+
+        self::assertNotNull($current);
+    }
+
+    public function testRegisterSetsErrorHandler(): void
+    {
+        $previous = set_error_handler(fn() => null);
+        restore_error_handler();
+
+        DebugPage::register();
+
+        $current = set_error_handler(fn() => null);
+        restore_error_handler();
+
+        self::assertNotNull($current);
+    }
+
     // --- Version constant ---
 
     public function testVersionConstant(): void
@@ -182,6 +208,75 @@ final class DebugPageTest extends TestCase
         // Should contain trace item elements
         self::assertStringContainsString('trace-item', $html);
         self::assertStringContainsString('trace-call', $html);
+    }
+
+    public function testSnippetFallbackForUnreadableFile(): void
+    {
+        $method = new \ReflectionMethod($this->debug, 'renderSnippet');
+
+        $html = $method->invoke($this->debug, '/definitely/missing/source.php', 5);
+
+        // Falls back gracefully when the source file cannot be read
+        self::assertStringContainsString('Source file not available', $html);
+    }
+
+    public function testSnippetWhenLineBeyondFileEnd(): void
+    {
+        $method = new \ReflectionMethod($this->debug, 'renderSnippet');
+
+        // A line far beyond the real file end must not yield an empty snippet
+        $html = $method->invoke($this->debug, __FILE__, PHP_INT_MAX);
+
+        self::assertStringContainsString('line-num', $html);
+        self::assertStringNotContainsString('snippet-body"></div>', $html);
+    }
+
+    public function testTraceShowsInternalFunctionPlaceholder(): void
+    {
+        $method = new \ReflectionMethod($this->debug, 'renderTraceItem');
+
+        $html = $method->invoke($this->debug, 3, '', 0, 'strlen()', '');
+
+        self::assertStringContainsString('[internal function]', $html);
+    }
+
+    public function testRenderHighlightsErrorLine(): void
+    {
+        $e = new \RuntimeException('test');
+        $html = $this->debug->render($e);
+
+        self::assertStringContainsString('class="snippet-line highlight"', $html);
+    }
+
+    public function testWithSnippetLinesShowsExactTotalLines(): void
+    {
+        $this->debug->withSnippetLines(5);
+        $html = $this->debug->render(new \RuntimeException('test'));
+
+        $count = substr_count($html, 'class="snippet-line');
+        self::assertSame(5, $count);
+    }
+
+    public function testWithSnippetLinesExtremeValueDoesNotBreak(): void
+    {
+        $this->debug->withSnippetLines(PHP_INT_MAX);
+        $html = $this->debug->render(new \RuntimeException('test'));
+
+        self::assertStringContainsString('line-num', $html);
+    }
+
+    public function testRenderServerInfoUsesServerValues(): void
+    {
+        $old = $_SERVER;
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $_SERVER['REQUEST_URI'] = '/debug?x=1';
+        try {
+            $html = $this->debug->render(new \RuntimeException('test'));
+            self::assertStringContainsString('>POST<', $html);
+            self::assertStringContainsString('/debug?x=1', $html);
+        } finally {
+            $_SERVER = $old;
+        }
     }
 
     private function createExceptionWithTrace(): \RuntimeException

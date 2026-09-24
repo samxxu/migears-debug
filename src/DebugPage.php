@@ -30,10 +30,15 @@ class DebugPage
 
     private int $snippetLines = 15;
 
-    /** Register as global exception and error handler. */
-    public static function register(): void
+    /**
+     * Register as global exception and error handler.
+     *
+     * Optionally pass a configured instance to customize behavior
+     * (e.g. `DebugPage::register((new DebugPage())->withSnippetLines(20))`).
+     */
+    public static function register(?self $page = null): void
     {
-        $instance = new self();
+        $instance = $page ?? new self();
 
         set_exception_handler(function (Throwable $e) use ($instance): void {
             if (PHP_SAPI !== 'cli' && !headers_sent()) {
@@ -51,7 +56,7 @@ class DebugPage
         });
     }
 
-    /** Set the number of lines to show around the error line. */
+    /** Set the total number of lines to show (error line included), minimum 1. */
     public function withSnippetLines(int $lines): self
     {
         $this->snippetLines = max(1, $lines);
@@ -280,8 +285,14 @@ HTML;
         }
 
         $total = count($lines);
-        $start = max(0, $line - $this->snippetLines - 1);
-        $end = min($total, $line + $this->snippetLines);
+        // snippetLines counts total lines shown (error line included), centered.
+        // Clamp start so a line beyond the file end never yields an empty snippet.
+        $half = intdiv($this->snippetLines, 2);
+        $start = max(0, ($line - 1) - $half);
+        if ($total > 0) {
+            $start = min($start, $total - 1);
+        }
+        $end = min($total, $start + $this->snippetLines);
 
         $html = '';
         for ($i = $start; $i < $end; $i++) {
