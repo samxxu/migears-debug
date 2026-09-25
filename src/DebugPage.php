@@ -12,7 +12,7 @@ use Throwable;
  * Renders a clean, dark-themed HTML page with:
  *   - Exception class and message
  *   - Highlighted code snippet around the error line
- *   - Stack trace with file links
+ *   - Stack trace with file locations
  *   - Request / server info
  *
  * Single class, zero dependencies. For development use only —

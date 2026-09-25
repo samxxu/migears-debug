@@ -14,10 +14,10 @@ A single class that renders beautiful, dark-themed error pages with code snippet
 
 - **Dark theme** — easy on the eyes during long debugging sessions
 - **Code snippet** — highlighted source code around the error line
-- **Stack trace** — clean, readable trace with file links
+- **Stack trace** — clean, readable trace with file locations
 - **Request info** — method, URI, server details at a glance
 - **XSS-safe** — all output is properly HTML-escaped
-- **Zero dependencies** — single class, ~300 lines
+- **Zero dependencies** — single class, ~400 lines
 - **One-line setup** — `DebugPage::register()` and you're done
 
 ## Installation
@@ -137,13 +137,13 @@ miGears Debug follows the miGears philosophy: **minimal, readable, and useful**.
 - **One class** — no handlers, no formatters, no dependencies
 - **Inline CSS** — no external assets, works in any environment
 - **XSS-safe** — all user-provided data is escaped
-- **Small enough to read** — ~300 lines of code
+- **Small enough to read** — ~400 lines of code
 
 **What we don't do**:
 - No AJAX / JSON error responses
 - No error logging (use `migears/log` for that)
 - No error grouping / analytics
-- No framework integration beyond set_exception_handler
+- No framework integration beyond the set_exception_handler / set_error_handler pair
 
 ## License
 
@@ -166,7 +166,7 @@ MIT
 - **调用栈** — 清晰易读的栈帧，带函数签名和文件位置
 - **请求信息** — 方法、URI、服务器详情一目了然
 - **XSS 安全** — 所有输出都经过正确的 HTML 转义
-- **零依赖** — 单个类，约 300 行
+- **零依赖** — 单个类，约 400 行
 - **一行代码搞定** — `DebugPage::register()` 就够了
 
 ## 安装
@@ -286,13 +286,13 @@ miGears Debug 遵循 miGears 设计哲学：**极简、可读、实用**。
 - **一个类** — 没有 handler、没有格式化器、没有依赖
 - **内联 CSS** — 无外部资源，任何环境都能工作
 - **XSS 安全** — 所有用户提供的数据都经过转义
-- **小到可以读完** — 约 300 行代码
+- **小到可以读完** — 约 400 行代码
 
 **我们不做的事**：
 - 没有 AJAX / JSON 错误响应
 - 没有错误日志记录（用 `migears/log`）
 - 没有错误分组 / 统计分析
-- 没有框架集成（除了 set_exception_handler）
+- 没有框架集成（除了 set_exception_handler / set_error_handler）
 
 ## 许可证
 
