@@ -279,6 +279,56 @@ final class DebugPageTest extends TestCase
         }
     }
 
+    public function testRenderServerInfoHandlesNonScalarValues(): void
+    {
+        $old = $_SERVER;
+        $_SERVER['HTTP_HOST'] = ['example.com', 'other.example.com'];
+        try {
+            $html = $this->debug->render(new \RuntimeException('test'));
+        } finally {
+            $_SERVER = $old;
+        }
+
+        // Degrades to the type name instead of triggering an
+        // "Array to string conversion" warning (failOnWarning turns it fatal).
+        self::assertStringContainsString('>array<', $html);
+    }
+
+    public function testRenderSubstitutesInvalidUtf8InMessage(): void
+    {
+        // Build the bytes at runtime so the code snippet cannot contain the
+        // substituted result; ENT_SUBSTITUTE renders \xFF as U+FFFD.
+        $e = new \RuntimeException('A' . chr(0xFF) . 'B');
+        $html = $this->debug->render($e);
+
+        self::assertStringContainsString("A\u{FFFD}B", $html);
+        preg_match('#<div class="error-message">(.*?)</div>#s', $html, $m);
+        self::assertNotSame('', $m[1] ?? '');
+    }
+
+    public function testFooterUsesVersionConstant(): void
+    {
+        $html = $this->debug->render(new \RuntimeException('test'));
+
+        self::assertStringContainsString('miGears Debug v' . DebugPage::VERSION, $html);
+    }
+
+    public function testRenderFallbackProducesMinimalPage(): void
+    {
+        $method = new \ReflectionMethod($this->debug, 'renderFallback');
+
+        $html = $method->invoke(
+            $this->debug,
+            new \RuntimeException('original boom'),
+            new \LogicException('render boom')
+        );
+
+        self::assertStringContainsString('<!DOCTYPE html>', $html);
+        self::assertStringContainsString('miGears Debug v' . DebugPage::VERSION, $html);
+        self::assertStringContainsString('original boom', $html);
+        self::assertStringContainsString('render boom', $html);
+    }
+
     private function createExceptionWithTrace(): \RuntimeException
     {
         return new \RuntimeException('test exception');

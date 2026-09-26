@@ -45,7 +45,13 @@ class DebugPage
                 header('HTTP/1.1 500 Internal Server Error');
                 header('Content-Type: text/html; charset=utf-8');
             }
-            echo $instance->render($e);
+            try {
+                echo $instance->render($e);
+            } catch (Throwable $failure) {
+                // Rendering runs inside the handler: a failure here must never
+                // become a bare fatal with no page at all.
+                echo $instance->renderFallback($e, $failure);
+            }
         });
 
         set_error_handler(function (int $severity, string $message, string $file, int $line): bool {
@@ -67,13 +73,14 @@ class DebugPage
     public function render(Throwable $e): string
     {
         $class = get_class($e);
-        $message = htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
+        $message = htmlspecialchars($e->getMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $shortClass = $this->shortClassName($class);
         $file = $e->getFile();
         $line = $e->getLine();
         $snippet = $this->renderSnippet($file, $line);
         $trace = $this->renderTrace($e);
         $serverInfo = $this->renderServerInfo();
+        $version = self::VERSION;
 
         return <<<HTML
 <!DOCTYPE html>
@@ -264,12 +271,35 @@ class DebugPage
         </div>
 
         <div class="footer">
-            miGears Debug v2.0.0 &middot; For development use only
+            miGears Debug v{$version} &middot; For development use only
         </div>
     </div>
 </body>
 </html>
 HTML;
+    }
+
+    /**
+     * Minimal last-resort page, used when rendering the debug page itself fails.
+     *
+     * Deliberately plain: no file access, no trace walking, only string
+     * concatenation and escaping, so it cannot fail the same way the full
+     * page did. The original error is still shown, just without the extras.
+     */
+    private function renderFallback(Throwable $original, Throwable $failure): string
+    {
+        $error = $this->escape($this->shortClassName(get_class($original)) . ': ' . $original->getMessage());
+        $reason = $this->escape($this->shortClassName(get_class($failure)) . ': ' . $failure->getMessage());
+
+        return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
+            . '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
+            . '<title>' . $error . '</title></head><body>'
+            . '<h1>miGears Debug v' . self::VERSION . '</h1>'
+            . '<p>The debug page could not be rendered.</p>'
+            . '<p><strong>Original error:</strong> ' . $error . '</p>'
+            . '<p><strong>Rendering failed with:</strong> ' . $reason . '</p>'
+            . '<p>See the server error log for details.</p>'
+            . '</body></html>';
     }
 
     /** Render the code snippet around the error line. */
@@ -332,7 +362,7 @@ HTML;
             $line = $frame['line'] ?? 0;
             $class = $frame['class'] ?? '';
             $type = $frame['type'] ?? '';
-            $function = $frame['function'] ?? '';
+            $function = $frame['function'];
             $call = $class . $type . $function . '()';
 
             $html .= $this->renderTraceItem($num, $file, $line, $call, $class);
@@ -376,11 +406,24 @@ HTML;
         foreach ($info as $key => $value) {
             $html .= '<div class="info-row">'
                 . '<div class="info-key">' . $this->escape($key) . '</div>'
-                . '<div class="info-value">' . $this->escape((string) $value) . '</div>'
+                . '<div class="info-value">' . $this->stringify($value) . '</div>'
                 . '</div>';
         }
 
         return $html;
+    }
+
+    /**
+     * Convert a $_SERVER value to an escaped string without emitting warnings.
+     *
+     * A non-scalar value (some SAPIs and bootstraps populate these keys with
+     * arrays) must not be cast directly: the resulting "Array to string
+     * conversion" warning would be turned into an exception by the registered
+     * error handler while rendering inside it.
+     */
+    private function stringify(mixed $value): string
+    {
+        return $this->escape(is_scalar($value) ? (string) $value : gettype($value));
     }
 
     /** Get the short class name (without namespace). */
@@ -393,6 +436,6 @@ HTML;
     /** HTML escape helper. */
     private function escape(string $value): string
     {
-        return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+        return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 }
