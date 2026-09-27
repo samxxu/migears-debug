@@ -144,42 +144,35 @@ final class DebugPageTest extends TestCase
 
     public function testRegisterSetsExceptionHandler(): void
     {
-        $previous = set_exception_handler(fn() => null);
-        restore_exception_handler();
-
         DebugPage::register();
 
-        $current = set_exception_handler(fn() => null);
-        restore_exception_handler();
+        $installed = set_exception_handler(fn() => null);
+        restore_exception_handler(); // drop the noop
+        restore_exception_handler(); // drop the handler register() installed
 
-        // After register, the handler should be set (not the same as before)
-        self::assertNotNull($current);
+        self::assertNotNull($installed);
     }
 
     public function testRegisterAcceptsConfiguredInstance(): void
     {
-        $previous = set_exception_handler(fn() => null);
-        restore_exception_handler();
-
         DebugPage::register((new DebugPage())->withSnippetLines(3));
 
-        $current = set_exception_handler(fn() => null);
+        $installed = set_exception_handler(fn() => null);
+        restore_exception_handler();
         restore_exception_handler();
 
-        self::assertNotNull($current);
+        self::assertNotNull($installed);
     }
 
     public function testRegisterSetsErrorHandler(): void
     {
-        $previous = set_error_handler(fn() => null);
-        restore_error_handler();
-
         DebugPage::register();
 
-        $current = set_error_handler(fn() => null);
+        $installed = set_error_handler(fn() => null);
+        restore_error_handler();
         restore_error_handler();
 
-        self::assertNotNull($current);
+        self::assertNotNull($installed);
     }
 
     // --- Version constant ---
@@ -329,8 +322,101 @@ final class DebugPageTest extends TestCase
         self::assertStringContainsString('render boom', $html);
     }
 
+    // --- fatal errors ---
+
+    public function testFatalErrorDetection(): void
+    {
+        $method = new \ReflectionMethod($this->debug, 'isFatalError');
+
+        self::assertTrue($method->invoke($this->debug, $this->errorOfType(E_ERROR)));
+        self::assertTrue($method->invoke($this->debug, $this->errorOfType(E_PARSE)));
+        self::assertTrue($method->invoke($this->debug, $this->errorOfType(E_COMPILE_ERROR)));
+        self::assertFalse($method->invoke($this->debug, $this->errorOfType(E_WARNING)));
+        self::assertFalse($method->invoke($this->debug, $this->errorOfType(E_DEPRECATED)));
+        self::assertFalse($method->invoke($this->debug, $this->errorOfType(E_USER_NOTICE)));
+    }
+
+    public function testEmitRendersPageAndMarksRendered(): void
+    {
+        $emit = new \ReflectionMethod($this->debug, 'emit');
+
+        ob_start();
+        $emit->invoke($this->debug, new \RuntimeException('emitted boom'));
+        $output = (string) ob_get_clean();
+
+        self::assertStringContainsString('emitted boom', $output);
+        self::assertStringContainsString('miGears Debug v' . DebugPage::VERSION, $output);
+
+        $rendered = new \ReflectionProperty($this->debug, 'rendered');
+        self::assertTrue($rendered->getValue($this->debug));
+    }
+
+    public function testShutdownRendersFatalErrorInSubprocess(): void
+    {
+        if (!function_exists('shell_exec')) {
+            self::markTestSkipped('shell_exec() is unavailable');
+        }
+
+        // A redeclaration is a genuine E_COMPILE_ERROR: not a Throwable, and
+        // invisible to set_error_handler, so only the shutdown path can see it.
+        // (A syntax error would not do: PHP 8 turns that into a ParseError.)
+        $broken = (string) tempnam(sys_get_temp_dir(), 'migears_broken_');
+        file_put_contents($broken, "<?php\nfunction migears_probe_duplicate(): void {}\n");
+
+        $output = $this->runPhp(
+            'require ' . var_export($this->autoloadPath(), true) . ";\n"
+            . "function migears_probe_duplicate(): void {}\n"
+            . "\\MiGears\\Debug\\DebugPage::register();\n"
+            . 'require ' . var_export($broken, true) . ";\n"
+        );
+        unlink($broken);
+
+        // Markup only the debug page emits, so the raw PHP fatal cannot satisfy it.
+        self::assertStringContainsString('miGears Debug v' . DebugPage::VERSION, $output);
+        self::assertStringContainsString('class="error-message"', $output);
+    }
+
+    public function testShutdownStaysSilentOnCleanExit(): void
+    {
+        if (!function_exists('shell_exec')) {
+            self::markTestSkipped('shell_exec() is unavailable');
+        }
+
+        $output = $this->runPhp(
+            'require ' . var_export($this->autoloadPath(), true) . ";\n"
+            . "\\MiGears\\Debug\\DebugPage::register();\n"
+            . "echo 'DONE';\n"
+        );
+
+        self::assertStringContainsString('DONE', $output);
+        self::assertStringNotContainsString('class="error-message"', $output);
+    }
+
     private function createExceptionWithTrace(): \RuntimeException
     {
         return new \RuntimeException('test exception');
+    }
+
+    /** @return array{type: int, message: string, file: string, line: int} */
+    private function errorOfType(int $type): array
+    {
+        return ['type' => $type, 'message' => 'boom', 'file' => __FILE__, 'line' => 1];
+    }
+
+    private function autoloadPath(): string
+    {
+        return dirname(__DIR__) . '/vendor/autoload.php';
+    }
+
+    /** Run a PHP snippet in a fresh process and return its combined output. */
+    private function runPhp(string $code): string
+    {
+        $script = (string) tempnam(sys_get_temp_dir(), 'migears_script_');
+        file_put_contents($script, "<?php\n" . $code);
+
+        $output = shell_exec(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($script) . ' 2>&1');
+        unlink($script);
+
+        return (string) $output;
     }
 }

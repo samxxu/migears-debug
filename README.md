@@ -47,7 +47,7 @@ To customize the registered page, pass a configured instance:
 DebugPage::register((new DebugPage())->withSnippetLines(20));
 ```
 
-That's it. Any uncaught exception or PHP error will now display a beautiful debug page.
+That's it. Uncaught exceptions, PHP warnings and notices, and fatal errors raised after registration will now display a beautiful debug page. Conditions that leave no room to render, such as memory exhaustion, are left to the SAPI.
 
 ### Manual Rendering
 
@@ -196,7 +196,7 @@ DebugPage::register();
 DebugPage::register((new DebugPage())->withSnippetLines(20));
 ```
 
-就这么简单。任何未捕获的异常或 PHP 错误都会显示一个漂亮的调试页面。
+就这么简单。未捕获的异常、PHP 警告与通知，以及注册之后发生的致命错误，都会显示一个漂亮的调试页面；至于内存耗尽这类没有余力渲染的情形，则不在覆盖范围内。
 
 ### 手动渲染
 

@@ -28,30 +28,35 @@ class DebugPage
 {
     public const VERSION = '2.0.0';
 
+    /**
+     * Fatal error types that bypass set_error_handler entirely, so they can
+     * only be picked up from error_get_last() during shutdown.
+     */
+    private const FATAL_ERROR_TYPES = E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR;
+
     private int $snippetLines = 15;
 
+    /** Whether an error page has already been emitted in this process. */
+    private bool $rendered = false;
+
     /**
-     * Register as global exception and error handler.
+     * Register as global exception, error and shutdown handler.
      *
      * Optionally pass a configured instance to customize behavior
      * (e.g. `DebugPage::register((new DebugPage())->withSnippetLines(20))`).
+     *
+     * Covers uncaught exceptions, warnings and notices promoted by the error
+     * handler, and fatal errors raised after registration — the last via a
+     * shutdown function, since they never reach set_error_handler. Conditions
+     * that leave no room to render, such as memory exhaustion, are out of
+     * reach and left to the SAPI.
      */
     public static function register(?self $page = null): void
     {
         $instance = $page ?? new self();
 
         set_exception_handler(function (Throwable $e) use ($instance): void {
-            if (PHP_SAPI !== 'cli' && !headers_sent()) {
-                header('HTTP/1.1 500 Internal Server Error');
-                header('Content-Type: text/html; charset=utf-8');
-            }
-            try {
-                echo $instance->render($e);
-            } catch (Throwable $failure) {
-                // Rendering runs inside the handler: a failure here must never
-                // become a bare fatal with no page at all.
-                echo $instance->renderFallback($e, $failure);
-            }
+            $instance->emit($e);
         });
 
         set_error_handler(function (int $severity, string $message, string $file, int $line): bool {
@@ -59,6 +64,10 @@ class DebugPage
                 return false;
             }
             throw new \ErrorException($message, 0, $severity, $file, $line);
+        });
+
+        register_shutdown_function(function () use ($instance): void {
+            $instance->renderFatalError();
         });
     }
 
@@ -300,6 +309,65 @@ HTML;
             . '<p><strong>Rendering failed with:</strong> ' . $reason . '</p>'
             . '<p>See the server error log for details.</p>'
             . '</body></html>';
+    }
+
+    /** Emit an error page, falling back to the minimal page if rendering fails. */
+    private function emit(Throwable $e): void
+    {
+        $this->rendered = true;
+        $this->sendErrorHeaders();
+
+        try {
+            echo $this->render($e);
+        } catch (Throwable $failure) {
+            // Rendering runs inside a handler: a failure here must never
+            // become a bare fatal with no page at all.
+            echo $this->renderFallback($e, $failure);
+        }
+    }
+
+    /**
+     * Emit a page for a fatal error that never reached the error handler.
+     *
+     * Runs at shutdown, so it must tolerate having nothing to report: a clean
+     * exit, and an exception already handled by the exception handler, both
+     * leave error_get_last() unset or carrying a non-fatal error.
+     */
+    private function renderFatalError(): void
+    {
+        if ($this->rendered) {
+            return;
+        }
+
+        $error = error_get_last();
+        if ($error === null || !$this->isFatalError($error)) {
+            return;
+        }
+
+        $this->emit(new \ErrorException(
+            $error['message'],
+            0,
+            $error['type'],
+            $error['file'],
+            $error['line']
+        ));
+    }
+
+    /**
+     * @param array{type: int, message: string, file: string, line: int} $error
+     */
+    private function isFatalError(array $error): bool
+    {
+        return (bool) ($error['type'] & self::FATAL_ERROR_TYPES);
+    }
+
+    /** Send a 500 response header, unless running under CLI or already sent. */
+    private function sendErrorHeaders(): void
+    {
+        if (PHP_SAPI !== 'cli' && !headers_sent()) {
+            header('HTTP/1.1 500 Internal Server Error');
+            header('Content-Type: text/html; charset=utf-8');
+        }
     }
 
     /** Render the code snippet around the error line. */
