@@ -7,7 +7,11 @@
          failOnWarning="true"
          failOnNotice="true"
          failOnDeprecation="true"
-         failOnRisky="true">
+         failOnRisky="true"
+         beStrictAboutOutputDuringTests="true"
+         displayDetailsOnTestsThatTriggerWarnings="true"
+         displayDetailsOnTestsThatTriggerNotices="true"
+         displayDetailsOnTestsThatTriggerDeprecations="true">
     <testsuites>
         <testsuite name="migears-debug">
             <directory>tests</directory>
