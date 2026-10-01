@@ -149,6 +149,7 @@ final class DebugPageTest extends TestCase
         $installed = set_exception_handler(fn() => null);
         restore_exception_handler(); // drop the noop
         restore_exception_handler(); // drop the handler register() installed
+        restore_error_handler();     // drop the error handler register() installed
 
         self::assertNotNull($installed);
     }
@@ -160,6 +161,7 @@ final class DebugPageTest extends TestCase
         $installed = set_exception_handler(fn() => null);
         restore_exception_handler();
         restore_exception_handler();
+        restore_error_handler();
 
         self::assertNotNull($installed);
     }
@@ -171,8 +173,25 @@ final class DebugPageTest extends TestCase
         $installed = set_error_handler(fn() => null);
         restore_error_handler();
         restore_error_handler();
+        restore_exception_handler();
 
         self::assertNotNull($installed);
+    }
+
+    public function testRegisterHandlersAreUnwoundAfterRegisterTests(): void
+    {
+        // Each test above calls register(), which stacks one exception and one
+        // error handler. Declaration order is the default execution order, so
+        // by now both stacks must be back to whatever PHPUnit installed: a
+        // leftover DebugPage handler surfaces as a closure carrying a
+        // DebugPage instance, which PHPUnit's own handlers do not.
+        $exception = set_exception_handler(fn() => null);
+        restore_exception_handler();
+        $error = set_error_handler(fn() => null);
+        restore_error_handler();
+
+        self::assertNull($this->debugPageFromHandler($exception));
+        self::assertNull($this->debugPageFromHandler($error));
     }
 
     // --- Version constant ---
@@ -231,6 +250,31 @@ final class DebugPageTest extends TestCase
         $html = $method->invoke($this->debug, 3, '', 0, 'strlen()', '');
 
         self::assertStringContainsString('[internal function]', $html);
+    }
+
+    public function testTraceCallToleratesFrameWithoutFunctionKey(): void
+    {
+        $method = new \ReflectionMethod($this->debug, 'traceCall');
+
+        // A frame that does not carry 'function' must render an empty call.
+        // Read bare, the undefined-key warning is promoted to an exception by
+        // the registered error handler — and failOnWarning makes it a failure
+        // here already.
+        $call = $method->invoke($this->debug, ['file' => 'x.php', 'line' => 1]);
+
+        self::assertSame('()', $call);
+    }
+
+    public function testTraceCallJoinsClassTypeAndFunction(): void
+    {
+        $method = new \ReflectionMethod($this->debug, 'traceCall');
+
+        $call = $method->invoke(
+            $this->debug,
+            ['class' => 'App\\Thing', 'type' => '->', 'function' => 'run']
+        );
+
+        self::assertSame('App\\Thing->run()', $call);
     }
 
     public function testRenderHighlightsErrorLine(): void
@@ -392,9 +436,116 @@ final class DebugPageTest extends TestCase
         self::assertStringNotContainsString('class="error-message"', $output);
     }
 
+    // --- response headers ---
+
+    public function testErrorStatusLineFollowsTheConnectionProtocol(): void
+    {
+        // The built-in server answers with the protocol PHP chose, and it is
+        // the one SAPI every environment has. A literal "HTTP/1.1 500 …"
+        // status header pins that protocol to 1.1 for an HTTP/1.0 request
+        // too, where http_response_code() leaves it to the SAPI.
+        $sock = stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+        if ($sock === false) {
+            self::markTestSkipped("cannot bind a loopback socket: {$errstr}");
+        }
+        $port = (int) substr((string) strrchr((string) stream_socket_get_name($sock, false), ':'), 1);
+        fclose($sock);
+
+        $router = (string) tempnam(sys_get_temp_dir(), 'migears_router_');
+        file_put_contents(
+            $router,
+            "<?php\nrequire " . var_export($this->autoloadPath(), true) . ";\n"
+            . "\\MiGears\\Debug\\DebugPage::register();\n"
+            . "throw new \\RuntimeException('server probe');\n"
+        );
+
+        $server = proc_open(
+            [PHP_BINARY, '-S', '127.0.0.1:' . $port, $router],
+            [0 => ['pipe', 'r'], 1 => ['file', '/dev/null', 'a'], 2 => ['file', '/dev/null', 'a']],
+            $pipes
+        );
+        if (!is_resource($server)) {
+            unlink($router);
+            self::markTestSkipped('cannot start the built-in server');
+        }
+
+        try {
+            $conn = false;
+            $deadline = microtime(true) + 3.0;
+            while (microtime(true) < $deadline) {
+                $conn = @fsockopen('127.0.0.1', $port);
+                if ($conn !== false) {
+                    break;
+                }
+                usleep(20 * 1000);
+            }
+            self::assertIsResource($conn, 'The built-in server did not start in time');
+
+            fwrite($conn, "GET / HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n");
+            $statusLine = (string) fgets($conn);
+            fclose($conn);
+        } finally {
+            foreach ($pipes as $pipe) {
+                if (is_resource($pipe)) {
+                    fclose($pipe);
+                }
+            }
+            proc_terminate($server);
+            proc_close($server);
+            unlink($router);
+        }
+
+        self::assertSame('HTTP/1.0 500 Internal Server Error', trim($statusLine));
+    }
+
+    // --- README claims ---
+
+    public function testReadmeStatesTheLineCountClaimWithItsMetricInBothHalves(): void
+    {
+        $readme = (string) file_get_contents(dirname(__DIR__) . '/README.md');
+
+        $claims = 0;
+        foreach (explode("\n", $readme) as $line) {
+            if (preg_match('/under 500 lines|500 行/u', $line) !== 1) {
+                continue;
+            }
+            $claims++;
+            self::assertMatchesRegularExpression(
+                '/comments and blank lines excluded|不计注释与空行/u',
+                $line,
+                'A line-count claim must carry its metric: ' . $line
+            );
+        }
+
+        // Two statements per README half.
+        self::assertSame(4, $claims, 'Both README halves must state the line-count claim');
+    }
+
     private function createExceptionWithTrace(): \RuntimeException
     {
         return new \RuntimeException('test exception');
+    }
+
+    /**
+     * Return the DebugPage instance a registered handler belongs to, if any.
+     *
+     * register() installs closures that `use ($instance)`, so the captured
+     * object identifies the handler without depending on the absolute depth of
+     * the stack — PHPUnit keeps handlers of its own below ours.
+     */
+    private function debugPageFromHandler(mixed $handler): ?DebugPage
+    {
+        if (!$handler instanceof \Closure) {
+            return null;
+        }
+
+        foreach ((new \ReflectionFunction($handler))->getClosureUsedVariables() as $value) {
+            if ($value instanceof DebugPage) {
+                return $value;
+            }
+        }
+
+        return null;
     }
 
     /** @return array{type: int, message: string, file: string, line: int} */

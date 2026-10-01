@@ -361,11 +361,18 @@ HTML;
         return (bool) ($error['type'] & self::FATAL_ERROR_TYPES);
     }
 
-    /** Send a 500 response header, unless running under CLI or already sent. */
+    /**
+     * Send a 500 response status, unless running under CLI or already sent.
+     *
+     * The status is set through http_response_code() rather than a literal
+     * "HTTP/1.1 500 …" header: the literal form pins the status line to
+     * HTTP/1.1 whatever the connection speaks, while this leaves the protocol
+     * to the SAPI.
+     */
     private function sendErrorHeaders(): void
     {
         if (PHP_SAPI !== 'cli' && !headers_sent()) {
-            header('HTTP/1.1 500 Internal Server Error');
+            http_response_code(500);
             header('Content-Type: text/html; charset=utf-8');
         }
     }
@@ -429,14 +436,30 @@ HTML;
             $file = $frame['file'] ?? '';
             $line = $frame['line'] ?? 0;
             $class = $frame['class'] ?? '';
-            $type = $frame['type'] ?? '';
-            $function = $frame['function'];
-            $call = $class . $type . $function . '()';
+            $call = $this->traceCall($frame);
 
             $html .= $this->renderTraceItem($num, $file, $line, $call, $class);
         }
 
         return $html;
+    }
+
+    /**
+     * Build a trace frame's call signature.
+     *
+     * Every key is read with a fallback, so a frame whose shape differs
+     * renders as an empty call instead of raising while rendering: a warning
+     * here would be turned into an exception by the registered error handler.
+     *
+     * @param array<string, mixed> $frame
+     */
+    private function traceCall(array $frame): string
+    {
+        $class = $frame['class'] ?? '';
+        $type = $frame['type'] ?? '';
+        $function = $frame['function'] ?? '';
+
+        return $class . $type . $function . '()';
     }
 
     /** Render a single trace item. */

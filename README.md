@@ -17,8 +17,23 @@ A single class that renders beautiful, dark-themed error pages with code snippet
 - **Stack trace** — clean, readable trace with file locations
 - **Request info** — method, URI, server details at a glance
 - **XSS-safe** — all output is properly HTML-escaped
-- **Zero dependencies** — single class, under 500 lines
+- **Zero dependencies** — single class, under 500 lines of code (comments and blank lines excluded)
 - **One-line setup** — `DebugPage::register()` and you're done
+
+## Boundaries
+
+**In scope**
+
+- The single `DebugPage` class (PSR-4 root `MiGears\Debug`): rendering a dark-themed HTML error page with the exception class and message, a highlighted code snippet around the error line, a numbered stack trace, and a request/server info table.
+- `DebugPage::register()` wiring the global handlers (`set_exception_handler`, `set_error_handler`, `register_shutdown_function`), plus `render(Throwable): string` for manual use and `withSnippetLines(int): self`.
+- XSS-safe output (every value escaped via `htmlspecialchars` with `ENT_QUOTES | ENT_SUBSTITUTE`) and inline CSS, so the page works without external assets.
+
+**Not in scope (by design)**
+
+- Error logging or persistence — errors are not stored; use `migears/log` for that.
+- AJAX / JSON error responses — only HTML pages are rendered.
+- Error grouping or analytics across requests.
+- Deciding whether the page may be shown (development vs production), and any framework integration beyond the handler pair — that belongs to the caller or the framework.
 
 ## Installation
 
@@ -166,8 +181,23 @@ MIT
 - **调用栈** — 清晰易读的栈帧，带函数签名和文件位置
 - **请求信息** — 方法、URI、服务器详情一目了然
 - **XSS 安全** — 所有输出都经过正确的 HTML 转义
-- **零依赖** — 单个类，代码不到 500 行
+- **零依赖** — 单个类，代码不到 500 行（不计注释与空行）
 - **一行代码搞定** — `DebugPage::register()` 就够了
+
+## 边界
+
+**范围内**
+
+- 单个 `DebugPage` 类（PSR-4 根为 `MiGears\Debug`）：渲染暗色主题的 HTML 错误页面，包含异常类名与消息、错误行周围的代码片段高亮、带编号的调用栈，以及请求/服务器信息表。
+- `DebugPage::register()` 装配全局处理器（`set_exception_handler`、`set_error_handler`、`register_shutdown_function`）；另提供 `render(Throwable): string` 手动渲染与 `withSnippetLines(int): self`。
+- 输出 XSS 安全（所有值经 `htmlspecialchars` 配合 `ENT_QUOTES | ENT_SUBSTITUTE` 转义），并使用内联 CSS，无需外部资源即可工作。
+
+**范围外（刻意不做）**
+
+- 错误日志记录或持久化 —— 不存储错误；请使用 `migears/log`。
+- AJAX / JSON 错误响应 —— 只渲染 HTML 页面。
+- 跨请求的错误分组或统计分析。
+- 判断该页面何时可以展示（开发环境还是生产环境），以及那对处理器之外的任何框架集成 —— 这属于调用方或框架。
 
 ## 安装
 
