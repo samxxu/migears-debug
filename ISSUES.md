@@ -17,19 +17,21 @@ Legend — **P0** functional or security · **P1** documentation that fails when
 
 | | |
 |---|---|
-| Unsettled | P0 0 · P1 0 · P2 0 · P3 3 · other 1 |
-| Settled | 0 of 4 |
-| Waiting on the owner | `P3-1`, `P3-2`, `P3-3` |
-| Waiting on the reviewer | `G2` |
+| Unsettled | P0 0 · P1 0 · P2 0 · P3 3 · other 0 |
+| Settled | 3 of 6 |
+| Waiting on the owner | `P3-4`, `P3-5` |
 | Waiting on the coordinator | _nothing_ |
-| Deferred, owing nobody | _nothing_ |
+| Waiting on the reviewer | _nothing_ |
+| Deferred, owing nobody | `P3-3` |
 
 | id | level | status | title |
 |---|---|---|---|
-| [`P3-1`](issues/P3-1.md) | P3 | **open** | The README promises 'any uncaught exception or PHP error will now … |
-| [`P3-2`](issues/P3-2.md) | P3 | **open** | `renderTrace()` still reads `$frame['function']` with no `?? ''` … |
-| [`P3-3`](issues/P3-3.md) | P3 | **open** | `register()` installs process-global handlers with no unregister path; … |
-| [`G2`](issues/G2.md) | - | **fixed** | Strict flags: `phpunit.xml.dist` currently sets `failOnWarning`, … |
+| [`P3-1`](issues/P3-1.md) | P3 | **verified** | The README promises 'any uncaught exception or PHP error will now … |
+| [`P3-2`](issues/P3-2.md) | P3 | **verified** | `renderTrace()` still reads `$frame['function']` with no `?? ''` … |
+| [`P3-3`](issues/P3-3.md) | P3 | **deferred** | `register()` installs process-global handlers with no unregister path; … |
+| [`P3-4`](issues/P3-4.md) | P3 | **open** | README 'Design Philosophy' says 'under 500 lines of code, comments and … |
+| [`P3-5`](issues/P3-5.md) | P3 | **open** | sendErrorHeaders() uses hardcoded HTTP/1.1 protocol in the header() … |
+| [`G2`](issues/G2.md) | - | **verified** | Strict flags: `phpunit.xml.dist` currently sets `failOnWarning`, … |
 
 ## Unclosed
 
@@ -38,16 +40,15 @@ highest severity first. `waiting on` is the party who acts next, read from that 
 
 | | |
 |---|---|
-| Unclosed | **4** of 4 |
-| By status | `open` 3 · `fixed` 1 |
-| Waiting on | owner 3 · reviewer 1 |
+| Unclosed | **3** of 6 |
+| By status | `open` 2 · `deferred` 1 |
+| Waiting on | owner 2 · - 1 |
 
 | level | item | status | waiting on | title |
 |---|---|---|---|---|
-| **P3** | [`P3-1`](issues/P3-1.md) | `open` | owner | The README promises 'any uncaught exception or PHP error will now … |
-| **P3** | [`P3-2`](issues/P3-2.md) | `open` | owner | `renderTrace()` still reads `$frame['function']` with no `?? ''` … |
-| **P3** | [`P3-3`](issues/P3-3.md) | `open` | owner | `register()` installs process-global handlers with no unregister path; … |
-| **-** | [`G2`](issues/G2.md) | `fixed` | reviewer | Strict flags: `phpunit.xml.dist` currently sets `failOnWarning`, … |
+| **P3** | [`P3-3`](issues/P3-3.md) | `deferred` | - | `register()` installs process-global handlers with no unregister path; … |
+| **P3** | [`P3-4`](issues/P3-4.md) | `open` | owner | README 'Design Philosophy' says 'under 500 lines of code, comments and … |
+| **P3** | [`P3-5`](issues/P3-5.md) | `open` | owner | sendErrorHeaders() uses hardcoded HTTP/1.1 protocol in the header() … |
 
 ## Verdict
 
@@ -88,19 +89,21 @@ No test for debugVar() with deeply nested arrays/objects; no test for error hand
 
 | | |
 |---|---|
-| 未了结 | P0 0 · P1 0 · P2 0 · P3 3 · 其他 1 |
-| 已了结 | 0 / 4 |
-| 等负责人 | `P3-1`, `P3-2`, `P3-3` |
-| 等评审方 | `G2` |
+| 未了结 | P0 0 · P1 0 · P2 0 · P3 3 · 其他 0 |
+| 已了结 | 3 / 6 |
+| 等模块主 | `P3-4`, `P3-5` |
 | 等协调人 | _无_ |
-| 已暂缓，不欠谁 | _无_ |
+| 等评审方 | _无_ |
+| 已暂缓，不欠谁 | `P3-3` |
 
 | id | 级别 | 状态 | 标题 |
 |---|---|---|---|
-| [`P3-1`](issues/P3-1.md) | P3 | **open** | README 承诺「任何未捕获异常或 PHP 错误都会显示调试页」，但 register() 只装了异常处理器与错误处理器，没有 … |
-| [`P3-2`](issues/P3-2.md) | P3 | **open** | renderTrace() 仍直接读 $frame['function']，无 ?? '' … |
-| [`P3-3`](issues/P3-3.md) | P3 | **open** | register() 装的是进程级全局处理器且无卸载路径；测试类只是重新注册以「恢复」，跑完后 DebugPage … |
-| [`G2`](issues/G2.md) | - | **fixed** | 严格开关：`phpunit.xml.dist` 目前已开启 … |
+| [`P3-1`](issues/P3-1.md) | P3 | **verified** | README 承诺「任何未捕获异常或 PHP 错误都会显示调试页」，但 register() 只装了异常处理器与错误处理器，没有 … |
+| [`P3-2`](issues/P3-2.md) | P3 | **verified** | renderTrace() 仍直接读 $frame['function']，无 ?? '' … |
+| [`P3-3`](issues/P3-3.md) | P3 | **deferred** | register() 装的是进程级全局处理器且无卸载路径；测试类只是重新注册以「恢复」，跑完后 DebugPage … |
+| [`P3-4`](issues/P3-4.md) | P3 | **open** | README「设计理念」称「去除注释和空行后不到 500 行代码」，但文件共 509 行；净代码行数可能确实低于 500，但说法不够精确。 |
+| [`P3-5`](issues/P3-5.md) | P3 | **open** | sendErrorHeaders() 在 header() 调用中使用硬编码的 HTTP/1.1 协议；在 HTTP/2 … |
+| [`G2`](issues/G2.md) | - | **verified** | 严格开关：`phpunit.xml.dist` 目前已开启 … |
 
 ## 未关闭
 
@@ -109,16 +112,15 @@ No test for debugVar() with deeply nested arrays/objects; no test for error hand
 
 | | |
 |---|---|
-| 未关闭 | **4** / 4 |
-| 按状态 | `open` 3 · `fixed` 1 |
-| 等在谁 | 负责人 3 · 评审方 1 |
+| 未关闭 | **3** / 6 |
+| 按状态 | `open` 2 · `deferred` 1 |
+| 等在谁 | 模块主 2 · - 1 |
 
 | 级别 | 条目 | 状态 | 等在谁 | 标题 |
 |---|---|---|---|---|
-| **P3** | [`P3-1`](issues/P3-1.md) | `open` | 负责人 | README 承诺「任何未捕获异常或 PHP 错误都会显示调试页」，但 register() 只装了异常处理器与错误处理器，没有 … |
-| **P3** | [`P3-2`](issues/P3-2.md) | `open` | 负责人 | renderTrace() 仍直接读 $frame['function']，无 ?? '' … |
-| **P3** | [`P3-3`](issues/P3-3.md) | `open` | 负责人 | register() 装的是进程级全局处理器且无卸载路径；测试类只是重新注册以「恢复」，跑完后 DebugPage … |
-| **-** | [`G2`](issues/G2.md) | `fixed` | 评审方 | 严格开关：`phpunit.xml.dist` 目前已开启 … |
+| **P3** | [`P3-3`](issues/P3-3.md) | `deferred` | - | register() 装的是进程级全局处理器且无卸载路径；测试类只是重新注册以「恢复」，跑完后 DebugPage … |
+| **P3** | [`P3-4`](issues/P3-4.md) | `open` | 模块主 | README「设计理念」称「去除注释和空行后不到 500 行代码」，但文件共 509 行；净代码行数可能确实低于 500，但说法不够精确。 |
+| **P3** | [`P3-5`](issues/P3-5.md) | `open` | 模块主 | sendErrorHeaders() 在 header() 调用中使用硬编码的 HTTP/1.1 协议；在 HTTP/2 … |
 
 ## 结论
 
