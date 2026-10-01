@@ -4,12 +4,12 @@
 > per item: a front-matter header and a thread. This file is generated from them and can be rewritten at
 > any time; edit an item, never this file.
 >
-> From the miGears Full-Module Code Review Report (5th round, 2026-09-28).
+> From the miGears Full-Module Code Review Report (6th round, 2026-10-01).
 
 | | |
 |---|---|
-| Status | **P2 open** |
-| Size | src 387 lines (net) · 34 tests · 1 src file |
+| Status | **Best state** |
+| Size | src 393 lines (net) · 39 tests · 1 src file |
 
 Legend — **P0** functional or security · **P1** documentation that fails when copied · **P2** robustness · **P3** metadata and docs
 
@@ -17,11 +17,11 @@ Legend — **P0** functional or security · **P1** documentation that fails when
 
 | | |
 |---|---|
-| Unsettled | P0 0 · P1 0 · P2 0 · P3 3 · other 0 |
-| Settled | 3 of 6 |
-| Waiting on the owner | `P3-4`, `P3-5` |
+| Unsettled | P0 0 · P1 0 · P2 0 · P3 2 · other 0 |
+| Settled | 5 of 7 |
+| Waiting on the owner | _nothing_ |
 | Waiting on the coordinator | _nothing_ |
-| Waiting on the reviewer | _nothing_ |
+| Waiting on the reviewer | `P3-6` |
 | Deferred, owing nobody | `P3-3` |
 
 | id | level | status | title |
@@ -29,8 +29,9 @@ Legend — **P0** functional or security · **P1** documentation that fails when
 | [`P3-1`](issues/P3-1.md) | P3 | **verified** | The README promises 'any uncaught exception or PHP error will now … |
 | [`P3-2`](issues/P3-2.md) | P3 | **verified** | `renderTrace()` still reads `$frame['function']` with no `?? ''` … |
 | [`P3-3`](issues/P3-3.md) | P3 | **deferred** | `register()` installs process-global handlers with no unregister path; … |
-| [`P3-4`](issues/P3-4.md) | P3 | **open** | README 'Design Philosophy' says 'under 500 lines of code, comments and … |
-| [`P3-5`](issues/P3-5.md) | P3 | **open** | sendErrorHeaders() uses hardcoded HTTP/1.1 protocol in the header() … |
+| [`P3-4`](issues/P3-4.md) | P3 | **verified** | README 'Design Philosophy' says 'under 500 lines of code, comments and … |
+| [`P3-5`](issues/P3-5.md) | P3 | **verified** | sendErrorHeaders() uses hardcoded HTTP/1.1 protocol in the header() … |
+| [`P3-6`](issues/P3-6.md) | P3 | **fixed** | The deferral of P3-3 was recorded as 'no unregister path, documented … |
 | [`G2`](issues/G2.md) | - | **verified** | Strict flags: `phpunit.xml.dist` currently sets `failOnWarning`, … |
 
 ## Unclosed
@@ -40,27 +41,26 @@ highest severity first. `waiting on` is the party who acts next, read from that 
 
 | | |
 |---|---|
-| Unclosed | **3** of 6 |
-| By status | `open` 2 · `deferred` 1 |
-| Waiting on | owner 2 · - 1 |
+| Unclosed | **2** of 7 |
+| By status | `deferred` 1 · `fixed` 1 |
+| Waiting on | reviewer 1 · - 1 |
 
 | level | item | status | waiting on | title |
 |---|---|---|---|---|
 | **P3** | [`P3-3`](issues/P3-3.md) | `deferred` | - | `register()` installs process-global handlers with no unregister path; … |
-| **P3** | [`P3-4`](issues/P3-4.md) | `open` | owner | README 'Design Philosophy' says 'under 500 lines of code, comments and … |
-| **P3** | [`P3-5`](issues/P3-5.md) | `open` | owner | sendErrorHeaders() uses hardcoded HTTP/1.1 protocol in the header() … |
+| **P3** | [`P3-6`](issues/P3-6.md) | `fixed` | reviewer | The deferral of P3-3 was recorded as 'no unregister path, documented … |
 
 ## Verdict
 
-A well-crafted developer debug page with trace rendering and variable dumping; sendErrorHeaders() hardcodes HTTP/1.1 which produces an incorrect status line on HTTP/2 requests.
+Both fixes are real and load-bearing; the one thing left is that the documentation the P3-3 deferral called for was never written.
 
 ## Fixed since the last round
 
-G2 strict flags confirmed complete (all 5 + 3 displayDetails); P3-1 shutdown handler for fatal errors confirmed registered; P3-2/P3-3 remain open per owner design choice.
+P3-4 and P3-5 verified by mutation: the README’s line-count claim now carries its metric in both halves, and the error status line goes through http_response_code() so it follows the connection protocol instead of asserting HTTP/1.1.
 
 ## Test gaps
 
-No test for debugVar() with deeply nested arrays/objects; no test for error handler returning false to defer to PHP's default handler; no test for isFatalError() with all error type constants.
+renderFallback() (the page rendered when rendering itself fails) has no test; stringify()’s non-scalar branch has no assertion of its own; the unreadable-file path in renderSnippet() is uncovered.
 
 ## Verification protocol
 
@@ -76,12 +76,12 @@ No test for debugVar() with deeply nested arrays/objects; no test for error hand
 > 本模块问题的概览。条目本体在 [`issues/`](issues/README.md)，一条目一文件：前置字段加讨论串。
 > 本文件由条目生成，随时可以整段重写；请改条目，不要改本文件。
 >
-> 出自 miGears 全模块代码评审报告（5th round，2026-09-28）。
+> 出自 miGears 全模块代码评审报告（6th round，2026-10-01）。
 
 | | |
 |---|---|
-| 状态 | **P2 待修** |
-| 体量 | src 387 行（净）· 34 个用例 · 1 个源文件 |
+| 状态 | **状态最好** |
+| 体量 | src 393 行（净）· 39 个用例 · 1 个源文件 |
 
 级别说明 — **P0** 功能性或安全级 · **P1** 文档照抄即错 · **P2** 健壮性 · **P3** 元数据与文档
 
@@ -89,11 +89,11 @@ No test for debugVar() with deeply nested arrays/objects; no test for error hand
 
 | | |
 |---|---|
-| 未了结 | P0 0 · P1 0 · P2 0 · P3 3 · 其他 0 |
-| 已了结 | 3 / 6 |
-| 等模块主 | `P3-4`, `P3-5` |
+| 未了结 | P0 0 · P1 0 · P2 0 · P3 2 · 其他 0 |
+| 已了结 | 5 / 7 |
+| 等模块主 | _无_ |
 | 等协调人 | _无_ |
-| 等评审方 | _无_ |
+| 等评审方 | `P3-6` |
 | 已暂缓，不欠谁 | `P3-3` |
 
 | id | 级别 | 状态 | 标题 |
@@ -101,8 +101,9 @@ No test for debugVar() with deeply nested arrays/objects; no test for error hand
 | [`P3-1`](issues/P3-1.md) | P3 | **verified** | README 承诺「任何未捕获异常或 PHP 错误都会显示调试页」，但 register() 只装了异常处理器与错误处理器，没有 … |
 | [`P3-2`](issues/P3-2.md) | P3 | **verified** | renderTrace() 仍直接读 $frame['function']，无 ?? '' … |
 | [`P3-3`](issues/P3-3.md) | P3 | **deferred** | register() 装的是进程级全局处理器且无卸载路径；测试类只是重新注册以「恢复」，跑完后 DebugPage … |
-| [`P3-4`](issues/P3-4.md) | P3 | **open** | README「设计理念」称「去除注释和空行后不到 500 行代码」，但文件共 509 行；净代码行数可能确实低于 500，但说法不够精确。 |
-| [`P3-5`](issues/P3-5.md) | P3 | **open** | sendErrorHeaders() 在 header() 调用中使用硬编码的 HTTP/1.1 协议；在 HTTP/2 … |
+| [`P3-4`](issues/P3-4.md) | P3 | **verified** | README「设计理念」称「去除注释和空行后不到 500 行代码」，但文件共 509 行；净代码行数可能确实低于 500，但说法不够精确。 |
+| [`P3-5`](issues/P3-5.md) | P3 | **verified** | sendErrorHeaders() 在 header() 调用中使用硬编码的 HTTP/1.1 协议；在 HTTP/2 … |
+| [`P3-6`](issues/P3-6.md) | P3 | **fixed** | P3-3 的暂缓被记为「不加卸载路径，改为写进文档」，条目并断言 README 已写明这些处理器是进程级、无法完全卸载。但两半 README … |
 | [`G2`](issues/G2.md) | - | **verified** | 严格开关：`phpunit.xml.dist` 目前已开启 … |
 
 ## 未关闭
@@ -112,27 +113,26 @@ No test for debugVar() with deeply nested arrays/objects; no test for error hand
 
 | | |
 |---|---|
-| 未关闭 | **3** / 6 |
-| 按状态 | `open` 2 · `deferred` 1 |
-| 等在谁 | 模块主 2 · - 1 |
+| 未关闭 | **2** / 7 |
+| 按状态 | `deferred` 1 · `fixed` 1 |
+| 等在谁 | 评审方 1 · - 1 |
 
 | 级别 | 条目 | 状态 | 等在谁 | 标题 |
 |---|---|---|---|---|
 | **P3** | [`P3-3`](issues/P3-3.md) | `deferred` | - | register() 装的是进程级全局处理器且无卸载路径；测试类只是重新注册以「恢复」，跑完后 DebugPage … |
-| **P3** | [`P3-4`](issues/P3-4.md) | `open` | 模块主 | README「设计理念」称「去除注释和空行后不到 500 行代码」，但文件共 509 行；净代码行数可能确实低于 500，但说法不够精确。 |
-| **P3** | [`P3-5`](issues/P3-5.md) | `open` | 模块主 | sendErrorHeaders() 在 header() 调用中使用硬编码的 HTTP/1.1 协议；在 HTTP/2 … |
+| **P3** | [`P3-6`](issues/P3-6.md) | `fixed` | 评审方 | P3-3 的暂缓被记为「不加卸载路径，改为写进文档」，条目并断言 README 已写明这些处理器是进程级、无法完全卸载。但两半 README … |
 
 ## 结论
 
-一个精心设计的开发者调试页面，含栈追踪渲染与变量打印；sendErrorHeaders() 硬编码 HTTP/1.1，在 HTTP/2 请求下会发送错误的状态行。
+两处修复都真实且承重；唯一遗留是 P3-3 暂缓裁定所要求的那段文档始终没有写。
 
 ## 本轮已修复确认
 
-G2 strict flags confirmed complete (all 5 + 3 displayDetails); P3-1 shutdown handler for fatal errors confirmed registered; P3-2/P3-3 remain open per owner design choice.
+P3-4 and P3-5 verified by mutation: the README’s line-count claim now carries its metric in both halves, and the error status line goes through http_response_code() so it follows the connection protocol instead of asserting HTTP/1.1.
 
 ## 测试盲区
 
-无深度嵌套数组/对象的 debugVar() 测试；无错误处理器返回 false 委托给 PHP 默认处理器的测试；无所有错误类型常量的 isFatalError() 测试。
+renderFallback()（渲染自身失败时的降级页）无用例；stringify() 的非标量分支无独立断言；renderSnippet() 的不可读文件路径未覆盖。
 
 ## 验证方式
 
