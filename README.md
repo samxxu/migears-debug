@@ -64,6 +64,8 @@ DebugPage::register((new DebugPage())->withSnippetLines(20));
 
 That's it. Uncaught exceptions, PHP warnings and notices, and fatal errors raised after registration will now display a beautiful debug page. Conditions that leave no room to render, such as memory exhaustion, are left to the SAPI.
 
+The handlers it installs are process-global and cannot be fully unwound — PHP offers no way to remove the shutdown callback — so call `register()` once, at bootstrap.
+
 ### Manual Rendering
 
 ```php
@@ -227,6 +229,8 @@ DebugPage::register((new DebugPage())->withSnippetLines(20));
 ```
 
 就这么简单。未捕获的异常、PHP 警告与通知，以及注册之后发生的致命错误，都会显示一个漂亮的调试页面；至于内存耗尽这类没有余力渲染的情形，则不在覆盖范围内。
+
+这些处理器是进程级全局的，且无法完全卸载——PHP 没有移除 shutdown 回调的办法——因此 `register()` 只应在引导阶段调用一次。
 
 ### 手动渲染
 

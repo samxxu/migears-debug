@@ -521,6 +521,27 @@ final class DebugPageTest extends TestCase
         self::assertSame(4, $claims, 'Both README halves must state the line-count claim');
     }
 
+    public function testReadmeStatesHandlersAreProcessGlobalAndCannotBeFullyUnwoundInBothHalves(): void
+    {
+        $readme = (string) file_get_contents(dirname(__DIR__) . '/README.md');
+
+        $statements = 0;
+        foreach (explode("\n", $readme) as $line) {
+            if (preg_match('/process-global|进程级全局/u', $line) !== 1) {
+                continue;
+            }
+            $statements++;
+            self::assertMatchesRegularExpression(
+                '/cannot be fully unwound|无法完全卸载/u',
+                $line,
+                'A process-global handler statement must also say registration cannot be fully unwound: ' . $line
+            );
+        }
+
+        // One statement per README half.
+        self::assertSame(2, $statements, 'Both README halves must state that the handlers are process-global');
+    }
+
     private function createExceptionWithTrace(): \RuntimeException
     {
         return new \RuntimeException('test exception');
